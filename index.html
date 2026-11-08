@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Baloo+2:wght@600;800&family=Dancing+Script:wght@600;700&family=Playfair+Display:wght@600;700&family=Be+Vietnam+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>Chúc mừng ngày nhà giáo Việt Nam</title>
+</head>
+<body>
+    <div class="scene password-scene active" id="scene1">
+        <div class="password-box">
+            <div class="lock-icon">🎓</div>
+            <h2>Nhập mật khẩu</h2>
+            <p>Gợi ý: Không có gợi ý đâu</p>
+            
+            <div class="password-display" id="passwordDisplay"></div>
+            
+            <div class="keypad">
+                <button class="key key1" onclick="pressKey('1')">1</button>
+                <button class="key key2" onclick="pressKey('2')">2</button>
+                <button class="key key3" onclick="pressKey('3')">3</button>
+                <button class="key key4" onclick="pressKey('4')">4</button>
+                <button class="key key5" onclick="pressKey('5')">5</button>
+                <button class="key key6" onclick="pressKey('6')">6</button>
+                <button class="key key7" onclick="pressKey('7')">7</button>
+                <button class="key key8" onclick="pressKey('8')">8</button>
+                <button class="key key9" onclick="pressKey('9')">9</button>
+                <button class="key delete" onclick="deleteKey()">←</button>
+                <button class="key key0" onclick="pressKey('0')">0</button>
+                <button class="key confirm" onclick="checkPassword()">✓</button>
+            </div>
+            <div class="error-msg" id="errorMsg">🎈 Sai mật khẩu! Thử lại nhé 💕</div>
+        </div>
+    </div>
+    <div class="scene greeting-scene" id="scene2">
+        <div class="greeting-card">
+            <h1 class="greet-line1">Chúc mừng</h1>
+            <h1 class="greet-line1">ngày</h1>
+            <h1 class="greet-line2">Nhà Giáo Việt Nam</h1>
+            <div class="greet-date">20/11</div>
+
+            <div class="divider"><span>✦</span></div>
+
+            <button class="btn-love" onclick="receiveLove()">
+                <span class="spark spark-a">✦</span>
+                <span class="spark spark-b">✦</span>
+                <span class="btn-text">Đón nhận yêu thương</span>
+                <span class="btn-heart">💖</span>
+            </button>
+        </div>
+    </div>
+    
+    <div class="scene celebration-scene" id="scene3">
+        <canvas id="fireworksCanvas"></canvas>
+        <div class="book-stage" id="bookStage">
+            <!-- Bức thư (nằm phía trên cuốn sách) -->
+            <div class="letter-wrap">
+                <div class="letter-card">
+                    <span class="tape tape-l"></span>
+                    <span class="tape tape-r"></span>
+
+                    <article class="letter">
+                        <p class="l-date l-line" style="--n:0">Ngày 20 tháng 11</p>
+                        <h2 class="l-title l-line" style="--n:0">✦ Thư tri ân ✦</h2>
+                        <p class="l-line l-greet" style="--n:1">Gửi thầy cô kính yêu,</p>
+                        <p class="l-line" style="--n:2">Nhân ngày Nhà giáo Việt Nam 20/11, chúng em xin gửi đến thầy cô lời cảm ơn chân thành nhất.</p>
+                        <p class="l-line" style="--n:3">Cảm ơn thầy cô đã kiên nhẫn chỉ cho chúng em từng con chữ, và cả những điều không nằm trong sách vở: cách đứng dậy sau vấp ngã, cách tin vào chính mình.</p>
+                        <p class="l-line" style="--n:4">Chúng em chúc thầy cô luôn mạnh khỏe, bình an và thật nhiều niềm vui. Mong những hạt giống thầy cô gieo hôm nay sẽ nở thành những bông hoa thật đẹp.</p>
+                        <p class="l-line l-sign" style="--n:5">Học trò của thầy cô,<br><span>Thanh Thu</span></p>
+                    </article>
+
+                    <div class="seal" aria-hidden="true"><span>♥</span></div>
+                </div>
+                <div class="photo-card" id="photoCard">
+                    <span class="tape tape-l"></span>
+                    <span class="tape tape-r"></span>
+                    <figure class="photo-frame" id="photoFrame">
+                        <img id="photoImg" alt="" draggable="false">
+                        <div class="photo-empty">
+                            <span>📷</span>
+                            <b id="photoNum">Ảnh 1</b>
+                            <small>Gắn ảnh trong mảng PHOTOS (script.js)</small>
+                        </div>
+                    </figure>
+                    <figcaption id="photoCaption"></figcaption>
+                </div>
+            </div>
+            <!-- Cuốn sách -->
+            <div class="book-area">
+                <div class="holo-floor"></div>
+                <div class="book-shadow"></div>
+                <div class="book-enter">
+                    <div class="book-glow"></div>
+                    <div class="book-flare"></div>
+                    <div class="book-float">
+                        <div class="book-tilt">
+                            <div class="book">
+                                <div class="b-back"></div>
+                                <div class="b-cover">
+                                    <div class="cover-front">
+                                        <div class="cover-frame">
+                                            <div class="cover-orn">✦</div>
+                                            <div class="cover-title">Tri ân</div>
+                                            <div class="cover-sub">Thầy Cô</div>
+                                            <div class="cover-date">20 · 11</div>
+                                        </div>
+                                        <button class="cover-btn" onclick="openBook()">Mở sách 📖</button>
+                                    </div>
+                                    <div class="cover-inside"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="book-flare"></div>
+                <button class="nav-btn nav-prev" id="navPrev" onclick="turnPage(-1)" aria-label="Trang trước">‹</button>
+                <button class="nav-btn nav-next" id="navNext" onclick="turnPage(1)"  aria-label="Trang sau">›</button>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
