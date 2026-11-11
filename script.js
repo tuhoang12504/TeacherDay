@@ -1,6 +1,6 @@
 // 1. CẤU HÌNH
 const CONFIG = {
-    password: '2011',
+    password: '1111',
 
     launchInterval: 800,   // ms giữa các lần bắn
     trailAlpha: 0.15,      // độ đậm lớp phủ đen (càng nhỏ vệt đuôi càng dài)
@@ -170,7 +170,6 @@ function pressKey(num) {
         enteredPassword += num;
         updateDisplay();
         createBalloon(num);
-        errorMsg.style.display = 'none';
     }
 }
 window.pressKey = pressKey;
@@ -277,7 +276,7 @@ function resizeCanvas() {
 }
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
-function createStars(count = CONFIG.numberStars) {
+function createStars(count = numberStars) {
     const container = document.createElement("div");
     container.id = "stars";
     document.body.prepend(container);
@@ -307,7 +306,7 @@ function createStars(count = CONFIG.numberStars) {
     }
 }
 
-createStars();
+createStars(150);
 
 function spawnShootingStar() {
     const el = document.createElement("div");
@@ -626,6 +625,7 @@ function startBookScene() {
     stage.style.setProperty("--lie-dur", `${BOOK.lie}s`);
     stage.style.setProperty("--open-dur", `${BOOK.open}s`);
     bookOpened = false;
+    if (typeof setFlowerMode === "function") setFlowerMode("calm");   // cảnh 3: hoa ít đi, nhường pháo hoa
     startFireworks();
 }
 
@@ -681,7 +681,9 @@ function renderPage() {
     stageEl.classList.toggle("page-photo",  page > 0);
 
     document.getElementById("navPrev").title = page === 0 ? "Đóng sách" : "Trang trước";
-    document.getElementById("navNext").title = page === lastPage() ? "Đóng sách" : "Trang sau";
+    const navNext = document.getElementById("navNext");
+    navNext.title = page === lastPage() ? "Đến trang kết" : "Trang sau";
+    navNext.textContent = page === lastPage() ? "✦" : "›";   // trang ảnh cuối: nút tới là ✦
     if (page === 0) return;
 
     const p = PHOTOS[page - 1];
@@ -713,12 +715,12 @@ function playIntro() {
     stageEl.classList.add("glow", page === 0 ? "show-letter" : "show-photo");
 }
 
-function turnPage(dir) {                 // dir: 1 = tới, -1 = lui
-    if (zoomLb) return;
+function turnPage(dir) {                            // dir: 1 = tới, -1 = lui
     if (backShut) { if (dir < 0) reopenBack(); return; }
     if (turning || !bookOpened) return;
     const next = page + dir;
-    if (next < 0 || next > lastPage()) { closeBook(); return; }
+    if (next < 0) { closeBook(); return; }
+    if (next > lastPage()) { startFinale(); return; }   // sau ảnh cuối: các trang bay ra, sang trang kết
 
     turning = true;
     const leaf = document.querySelector(".pages-f");
@@ -1125,7 +1127,7 @@ document.querySelector(".cover-front").addEventListener("click", e => {
 //  2. Nếu bị chặn, nhạc sẽ tự phát ở lần chạm / bấm đầu tiên (thường là lúc bấm phím nhập mật khẩu).
 (function () {
     const MUSIC = {
-        src: "music.m4a",
+        src: "music.m4a",   // đường dẫn file nhạc (đặt file vào thư mục music/)
         volume: 0.6,             // 0 - 1
         fadeIn: 2000,            // ms nhạc to dần khi bắt đầu
         fadeOut: 600,            // ms nhạc nhỏ dần khi tắt
@@ -1215,4 +1217,605 @@ document.querySelector(".cover-front").addEventListener("click", e => {
 
     render();
     play();   // thử phát ngay khi tải trang
+})();
+
+// ===== Trang kết: các trang bay ra, gấp thành thuyền giấy và cập bến =====
+const FIN = {
+    // Mốc thời gian (giây, tính từ lúc bấm ✦)
+    sheetsAt: 0.5,       // các tờ giấy bay ra khỏi sách
+    bookOutAt: 1.6,      // sách mờ dần, lặn xuống đáy
+    seaAt: 2.4,          // biển dâng lên
+    assembleAt: 3.4,     // thuyền được gấp lại
+    sailAt: 5.0,         // thuyền bắt đầu chạy, câu chúc 1 hiện
+    line2At: 8.4,        // câu 2 + hải đăng bừng sáng
+    line3At: 10.6,       // câu 3
+    travel: 9,           // thuyền chạy mất bao lâu (giây)
+    endAt: 15.6,         // hiện chữ ký + nút "Xem lại từ đầu"
+
+    sheets: 8,           // số tờ giấy
+    sheetStagger: 0.09,  // lệch nhau giữa các tờ
+    sheetScatter: 1.4,   // bay tản ra
+    sheetGather: 1.5,    // bay tụ về thuyền
+};
+FIN.arriveAt = FIN.sailAt + FIN.travel;   // thuyền cập bến -> pháo hoa nổ
+
+const finaleEl = document.getElementById("finale");
+const finBoat = document.getElementById("finBoat");
+const finIsland = finaleEl.querySelector(".fin-island");
+const finReduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+finaleEl.style.setProperty("--fin-travel", `${FIN.travel}s`);
+
+const F = { on: false, final: false, celebrated: false, restarting: false, timers: [], celebTimers: [], anims: [] };
+
+function finAt(sec, fn) { F.timers.push(setTimeout(fn, sec * 1000)); }
+function finCelebAt(sec, fn) { F.celebTimers.push(setTimeout(fn, sec * 1000)); }   // pháo hoa ăn mừng chạy tiếp cả khi vào trạng thái cuối
+const finRand = (a, b) => a + Math.random() * (b - a);
+
+// Tách câu chúc thành từng ký tự để hiện dần
+function splitFinaleLine(el) {
+    const text = el.textContent.normalize("NFC");
+    el.textContent = "";
+    let i = 0;
+    text.split(/(\s+)/).forEach(part => {
+        if (!part) return;
+        if (/^\s+$/.test(part)) { el.appendChild(document.createTextNode(" ")); return; }
+        const word = document.createElement("span");
+        word.className = "f-word";
+        for (const ch of part) {
+            const c = document.createElement("span");
+            c.className = "f-char";
+            c.style.setProperty("--i", i++);
+            c.textContent = ch;
+            word.appendChild(c);
+        }
+        el.appendChild(word);
+    });
+}
+finaleEl.querySelectorAll(".fin-line").forEach(splitFinaleLine);
+
+// Điểm xuất phát / đích của thuyền (px), tính theo kích thước màn hình hiện tại
+function layoutFinale() {
+    const W = window.innerWidth;
+    const x0 = Math.max(10, W * 0.07);
+    const x1 = finIsland.offsetLeft - finBoat.offsetWidth - W * 0.015;   // dừng sát bờ đảo
+    finaleEl.style.setProperty("--bx0", `${x0}px`);
+    finaleEl.style.setProperty("--bx1", `${Math.max(x0 + 40, x1)}px`);
+}
+
+layoutFinale();   // đặt sẵn --bx0 / --bx1 để thuyền không bị trượt khi tính lại lúc bắt đầu
+
+// --- Pháo hoa dạng chữ: vẽ chữ lên canvas nhỏ rồi lấy mẫu điểm ---
+function textPoints(text) {
+    const size = 96;
+    const font = `800 ${size}px "Baloo 2", "Be Vietnam Pro", sans-serif`;
+    const c = document.createElement("canvas");
+    const g = c.getContext("2d");
+    g.font = font;
+    const w = Math.ceil(g.measureText(text).width) + 24;
+    const h = Math.ceil(size * 1.5);
+    c.width = w;
+    c.height = h;
+    g.font = font;                       // đổi kích thước canvas thì font bị reset
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillStyle = "#fff";
+    g.fillText(text, w / 2, h / 2);
+
+    const data = g.getImageData(0, 0, w, h).data;
+    const pts = [];
+    const step = 4;
+    for (let y = 0; y < h; y += step) {
+        for (let x = 0; x < w; x += step) {
+            if (data[(y * w + x) * 4 + 3] > 140) {
+                const nx = (x - w / 2) / (w / 2);
+                pts.push({ x: nx, y: (y - h / 2) / (w / 2), hueShift: (nx + 1) * 25 });
+            }
+        }
+    }
+    return pts;
+}
+
+// Quả pháo bay lên rồi nổ thành chữ (dùng lại Rocket và spawnShape có sẵn)
+class TextRocket extends Rocket {
+    constructor(x, hue, text, apexFrac) {
+        super(x, hue, "normal");
+        this.pts = textPoints(text);
+        const rise = canvas.height * (1 - apexFrac);                  // độ cao cần lên tới
+        this.speed = -Math.sqrt(2 * CONFIG.rocket.gravity * rise);
+        this.vx = 0;
+    }
+    update() {
+        this.y += this.speed;
+        this.x += this.vx;
+        this.speed += CONFIG.rocket.gravity;
+        if (this.speed >= 0) {
+            spawnShape(this.x, this.y, this.color, this.pts, canvas.width * 0.0032, "heart");
+            return false;
+        }
+        return true;
+    }
+}
+function launchTextRocket(text, xFrac, hue, apexFrac = 0.24) {
+    rockets.push(new TextRocket(canvas.width * xFrac, hue, text, apexFrac));
+}
+
+// --- Các tờ giấy bay ra khỏi sách rồi tụ về chỗ chiếc thuyền ---
+function flySheets() {
+    const book = document.querySelector(".book").getBoundingClientRect();
+    const cx = book.left + book.width / 2;
+    const cy = book.top + book.height / 2;
+    const boat = finBoat.getBoundingClientRect();
+    const tx = boat.left + boat.width / 2;
+    const ty = boat.top + boat.height * 0.55;
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const sw = Math.max(46, Math.min(W * 0.075, 90));
+    const total = (FIN.sheetScatter + FIN.sheetGather) * 1000;
+
+    const pose = (p, rx, ry, rz, sc, o, easing) => ({
+        transform: `translate(${p.x}px, ${p.y}px) translate(-50%, -50%) perspective(700px) rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg) scale(${sc})`,
+        opacity: o,
+        easing,
+    });
+    const ease = "cubic-bezier(0.3, 0.6, 0.3, 1)";
+
+    for (let i = 0; i < FIN.sheets; i++) {
+        const s = document.createElement("div");
+        s.className = "fin-sheet";
+        s.style.setProperty("--sw", `${sw}px`);
+        finaleEl.appendChild(s);
+
+        const mid = { x: cx + finRand(-0.35, 0.35) * W, y: cy - H * finRand(0.18, 0.54) };
+        const drift = { x: mid.x + finRand(-30, 30), y: mid.y + finRand(-12, 20) };
+
+        const anim = s.animate([
+            { ...pose({ x: cx, y: cy }, 70, 0, finRand(-20, 20), 0.3, 0, ease), offset: 0 },
+            { ...pose(mid, finRand(-40, 40), finRand(-200, 200), finRand(-90, 90), 1, 1, ease), offset: 0.42 },
+            { ...pose(drift, finRand(-30, 30), finRand(-160, 160), finRand(-60, 60), 1, 1, ease), offset: 0.62 },
+            { ...pose({ x: tx, y: ty }, 0, 0, finRand(-20, 20), 0.35, 1, "linear"), offset: 0.92 },
+            { ...pose({ x: tx, y: ty }, 0, 0, 0, 0.25, 0, "linear"), offset: 1 },
+        ], { duration: total, delay: i * FIN.sheetStagger * 1000, easing: "linear", fill: "both" });
+
+        anim.onfinish = () => s.remove();
+        F.anims.push(anim);
+    }
+}
+
+function showFinLine(n) {
+    finaleEl.querySelector(`.fl${n}`).classList.add("show");
+}
+
+function lightLamp() {
+    finaleEl.classList.add("lit");
+    [0, 0.35, 0.7].forEach(d => finAt(d, launchRocket));
+}
+
+// Thuyền cập bến: pháo hoa nổ rộ, hai lần dạng chữ
+function celebrateFinale() {
+    if (F.celebrated) return;
+    F.celebrated = true;
+    finCelebAt(0, () => launchTextRocket("Tri ân", 0.5, 45));
+    finCelebAt(1.9, () => launchTextRocket("Thầy Cô", 0.5, 330));
+    for (let i = 0; i < 6; i++) finCelebAt(0.4 + i * 0.45, launchRocket);
+}
+
+// Trạng thái cuối: mọi thứ đã xong. Dùng cho cả lúc chạy hết hoạt cảnh lẫn lúc bấm bỏ qua
+function finalizeFinale(skipped = false) {
+    if (F.final) return;
+    F.timers.forEach(clearTimeout);
+    F.timers = [];
+    F.anims.forEach(a => { a.onfinish = null; a.cancel(); });
+    F.anims = [];
+    finaleEl.querySelectorAll(".fin-sheet").forEach(s => s.remove());
+    document.querySelectorAll(".mote").forEach(m => m.remove());
+
+    stageEl.classList.add("busy", "wipe-next", "finale-out");
+    if (typeof setFlowerMode === "function") setFlowerMode("off");
+    layoutFinale();
+    finaleEl.classList.remove("running");
+    finaleEl.classList.add("on", "sea-on", "assemble", "approach", "lit", "is-final");
+    F.final = true;
+
+    finAt(skipped ? 0.4 : 0, () => finaleEl.classList.add("show-end"));
+    celebrateFinale();
+}
+
+function startFinale() {
+    if (F.on || turning || !bookOpened || page !== lastPage()) return;
+    F.on = true;
+    F.final = false;
+    F.celebrated = false;
+    turning = true;
+    closePhotoZoom(true);
+    if (typeof setFlowerMode === "function") setFlowerMode("off");   // trang kết: không còn hoa
+
+    stageEl.classList.remove("show-nav");
+    stageEl.classList.add("busy", "wipe-next");          // ảnh cuối chìm vào sách
+    document.querySelectorAll(".mote").forEach(m => m.remove());
+
+    layoutFinale();
+    finaleEl.classList.add("on", "running");
+    finaleEl.setAttribute("aria-hidden", "false");
+
+    if (finReduce.matches) { finalizeFinale(true); return; }   // người dùng tắt hiệu ứng: vào thẳng trang kết
+
+    finAt(FIN.sheetsAt,   flySheets);
+    finAt(FIN.bookOutAt,  () => stageEl.classList.add("finale-out"));
+    finAt(FIN.seaAt,      () => finaleEl.classList.add("sea-on"));
+    finAt(FIN.assembleAt, () => finaleEl.classList.add("assemble"));
+    finAt(FIN.sailAt,     () => { finaleEl.classList.add("approach"); showFinLine(1); });
+    finAt(FIN.line2At,    () => { showFinLine(2); lightLamp(); });
+    finAt(FIN.line3At,    () => showFinLine(3));
+    finAt(FIN.arriveAt,   celebrateFinale);
+    finAt(FIN.endAt,      () => finalizeFinale(false));
+}
+
+// Chạm vào bất kỳ đâu (hoặc bấm Esc) để bỏ qua hoạt cảnh
+finaleEl.addEventListener("click", e => {
+    if (!F.on || F.final) return;
+    finalizeFinale(true);
+});
+document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && F.on && !F.final) finalizeFinale(true);
+});
+
+// Xoay màn hình / đổi kích thước: tính lại vị trí thuyền, đang chạy dở thì nhảy tới trạng thái cuối
+window.addEventListener("resize", () => {
+    if (!F.on) return;
+    layoutFinale();
+    if (!F.final) finalizeFinale(true);
+});
+
+// --- "Xem lại từ đầu": quay về cuốn sách đóng ở cảnh 3 ---
+function restartFromBook() {
+    if (!F.final || F.restarting) return;
+    F.restarting = true;
+    finaleEl.classList.add("fin-out");
+
+    setTimeout(() => {
+        F.timers.forEach(clearTimeout);
+        F.celebTimers.forEach(clearTimeout);
+        F.timers = [];
+        F.celebTimers = [];
+
+        // gỡ mọi trạng thái của trang kết, không để hiệu ứng chạy ngược khi đã ẩn
+        finaleEl.className = "finale no-anim";
+        void finaleEl.offsetWidth;
+        finaleEl.classList.remove("no-anim");
+        finaleEl.setAttribute("aria-hidden", "true");
+
+        // đưa cuốn sách về lúc đầu cảnh 3
+        const area = document.querySelector(".book-area");
+        area.style.transition = "none";
+        stageEl.classList.remove(
+            "lying", "closed", "open", "glow", "show-letter", "show-photo", "show-nav",
+            "busy", "wipe-next", "wipe-prev", "rise-in", "shut-back", "show-reopen", "finale-out"
+        );
+        void area.offsetWidth;
+        area.style.transition = "";
+
+        bookOpened = false;
+        backShut = false;
+        turning = false;
+        page = 0;
+        renderPage();
+
+        // sách nổi lên từ phía dưới như lúc mới vào cảnh 3, nút "Mở sách" hiện lại
+        [".book-enter", ".cover-btn"].forEach(sel => {
+            const el = document.querySelector(sel);
+            el.style.animation = "none";
+            void el.offsetWidth;
+            el.style.animation = "";
+        });
+
+        if (typeof setFlowerMode === "function") setFlowerMode("calm");   // về lại cảnh 3: hoa ít
+
+        F.on = false;
+        F.final = false;
+        F.celebrated = false;
+        F.restarting = false;
+    }, 800);
+}
+window.restartFromBook = restartFromBook;
+
+// ===== Cánh đồng hoa =====
+// Nền chung nằm dưới các cảnh (CSS ở cuối style.css). Đổi chế độ theo cảnh bằng setFlowerMode():
+//   "full": cảnh 1 và 2 - hoa ở đáy, hai góc dưới và hai góc trên (rủ xuống)
+//   "calm": cảnh 3      - chỉ còn vài hàng hoa thấp ở đáy, nhường điểm nhấn cho pháo hoa
+//   "off" : cảnh 4      - không có hoa
+(function () {
+    const field = document.getElementById("flowerField");
+    if (!field) return;
+
+    const FIELD = {
+        bg: "#1a1a4e",
+        // Hoa ở đáy, 3 lớp độ sâu
+        // spacing: px giữa hai cây (nhỏ hơn = dày hơn) | min: số cây tối thiểu
+        // hv: [độ cao ở giữa, ở mép] (vh) | fade: pha màu nền (xa thì tối hơn)
+        // t: khoảng thời gian bắt đầu mọc (giây) | keep: tỉ lệ cây còn lại ở cảnh 3
+        layers: [
+            { name: "far",  spacing: 24, min: 22, hv: [4, 13], fade: 0.45, t: [0, 1.4],   keep: 0.5,
+              types: { blossom: 3, daisy: 3, bud: 2, grass: 3, tulip: 1, rose: 1, lotus: 1 } },
+            { name: "mid",  spacing: 40, min: 14, hv: [6, 24], fade: 0.18, t: [0.3, 2],   keep: 0.3,
+              types: { rose: 3, daisy: 3, tulip: 2, blossom: 2, lotus: 2, bud: 1, grass: 3 } },
+            { name: "near", spacing: 80, min: 8,  hv: [4, 34], fade: 0,    t: [0.6, 2.4], keep: 0,
+              types: { lotus: 3, rose: 3, tulip: 2, daisy: 2, blossom: 1, grass: 2 } },
+        ],
+        // Hai góc trên: hoa rủ xuống (chỉ có ở cảnh 1 và 2)
+        top: {
+            name: "top",
+            spacing: 150,          // px; số cây mỗi góc = chiều rộng / spacing
+            min: 4,
+            reach: 0.2,            // góc rộng bao nhiêu (tỉ lệ bề ngang màn hình)
+            hv: [2, 18],           // độ dài rủ ở sát trong -> sát góc (vh)
+            fade: 0.1,
+            t: [0.8, 2.4],
+            keep: 0,
+            types: { blossom: 3, daisy: 2, bud: 3, rose: 1, lotus: 1, grass: 2 },
+        },
+        fireflies: 12,
+    };
+
+    const PALETTES = [
+        { petal: "#ffb3cd", light: "#ffd9e6", dark: "#f58cb0", core: "#ffd54a" }, // hồng
+        { petal: "#fff0d2", light: "#fffaf0", dark: "#f0d29a", core: "#ffc247" }, // kem
+        { petal: "#ffe27a", light: "#fff3b0", dark: "#f2c43c", core: "#d9803a" }, // vàng
+        { petal: "#b8f0dc", light: "#e2fff4", dark: "#86d8b8", core: "#ffd54a" }, // bạc hà
+        { petal: "#d9c8ff", light: "#efe7ff", dark: "#b79df0", core: "#ffd54a" }, // oải hương
+        { petal: "#a8e8ff", light: "#dbf7ff", dark: "#78cdee", core: "#fff3b0" }, // xanh lơ
+    ];
+    // mỗi loại hoa dùng những bảng màu nào (số lặp lại = hay gặp hơn)
+    const TYPE_PALETTES = {
+        lotus: [0, 0, 1], rose: [0, 1, 2, 4, 5], daisy: [1, 1, 2, 0],
+        tulip: [0, 2, 3, 4], blossom: [0, 4, 1, 5], bud: [0, 2, 4, 3], grass: [0],
+    };
+
+    const frand = (a, b) => a + Math.random() * (b - a);
+    const fpick = arr => arr[Math.floor(Math.random() * arr.length)];
+    const fx = n => +n.toFixed(1);
+    const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+    const mixHex = (a, b, t) => {
+        const A = hex2rgb(a), B = hex2rgb(b);
+        return "#" + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, "0")).join("");
+    };
+    function fpickWeighted(map) {
+        const e = Object.entries(map);
+        let r = Math.random() * e.reduce((s, [, w]) => s + w, 0);
+        for (const [k, w] of e) if ((r -= w) < 0) return k;
+        return e[0][0];
+    }
+
+    /* ---------- Hình cánh hoa (gốc ở 0,0, hướng lên) ---------- */
+    const pointedPetal = (len, w) =>
+        `M0 0C${fx(-w)} ${fx(-len * .3)} ${fx(-w * .8)} ${fx(-len * .85)} 0 ${fx(-len)}C${fx(w * .8)} ${fx(-len * .85)} ${fx(w)} ${fx(-len * .3)} 0 0Z`;
+    const roundPetal = (len, w) =>
+        `M0 0C${fx(-w)} ${fx(-len * .2)} ${fx(-w)} ${fx(-len * .95)} 0 ${fx(-len)}C${fx(w)} ${fx(-len * .95)} ${fx(w)} ${fx(-len * .2)} 0 0Z`;
+    const notchedPetal = (len, w) =>
+        `M0 0C${fx(-w)} ${fx(-len * .35)} ${fx(-w * 1.15)} ${fx(-len * .88)} ${fx(-w * .28)} ${fx(-len)}L0 ${fx(-len * .88)}L${fx(w * .28)} ${fx(-len)}C${fx(w * 1.15)} ${fx(-len * .88)} ${fx(w)} ${fx(-len * .35)} 0 0Z`;
+    const petalEl = (d, fill, rot = 0, extra = "") =>
+        `<path d="${d}" fill="${fill}" transform="rotate(${fx(rot)})" ${extra}/>`;
+
+    /* ---------- Đầu hoa ---------- */
+    function headLotus(c) {
+        let s = "";
+        [-68, -34, 0, 34, 68].forEach(a => s += petalEl(pointedPetal(46, 13), c.dark, a));
+        [-51, -17, 17, 51].forEach(a => s += petalEl(pointedPetal(42, 14), c.petal, a));
+        [-26, 0, 26].forEach(a => {
+            s += petalEl(pointedPetal(37, 15), c.light, a);
+            s += petalEl(pointedPetal(27, 7), c.petal, a, 'opacity=".55"');
+        });
+        return s;
+    }
+
+    function headRose(c) {
+        const st = `stroke="${c.dark}" stroke-opacity=".5" stroke-width="1"`;
+        let s = `<circle r="27" fill="${c.dark}"/>`;
+        for (let i = 0; i < 5; i++) {
+            const a = i * 72 * Math.PI / 180;
+            s += `<circle cx="${fx(Math.sin(a) * 15)}" cy="${fx(-Math.cos(a) * 15)}" r="15" fill="${c.petal}" ${st}/>`;
+        }
+        for (let i = 0; i < 4; i++) {
+            const a = (i * 90 + 25) * Math.PI / 180;
+            s += `<circle cx="${fx(Math.sin(a) * 8)}" cy="${fx(-Math.cos(a) * 8)}" r="11" fill="${c.light}" ${st}/>`;
+        }
+        s += `<circle r="6.5" fill="${c.petal}" ${st}/>`;
+        s += `<path d="M-4 0a4 4 0 1 1 4 4M-8 2a8 8 0 0 1 7-8M2 -8a8 8 0 0 1 7 5" fill="none" stroke="${c.dark}" stroke-width="1.5" stroke-linecap="round" opacity=".8"/>`;
+        return s;
+    }
+
+    function headDaisy(c) {
+        let s = "";
+        for (let i = 0; i < 14; i++) s += petalEl(roundPetal(32, 6.2), i % 2 ? c.petal : c.light, i * 360 / 14);
+        for (let i = 0; i < 14; i++) s += petalEl(roundPetal(25, 5), c.light, i * 360 / 14 + 360 / 28);
+        s += `<circle r="9" fill="${c.core}"/><circle r="9" fill="none" stroke="#d9803a" stroke-opacity=".5" stroke-width="2"/>`;
+        s += `<circle cx="-2.5" cy="-2.5" r="3" fill="#fff" opacity=".6"/>`;
+        return s;
+    }
+
+    function headTulip(c) {
+        return petalEl(pointedPetal(48, 15), c.dark, -17) + petalEl(pointedPetal(48, 15), c.dark, 17)
+            + petalEl(pointedPetal(46, 19), c.petal, 0)
+            + petalEl(pointedPetal(34, 8), c.light, 0, 'opacity=".5"');
+    }
+
+    function headBlossom(c) {
+        let s = "";
+        for (let i = 0; i < 5; i++) s += petalEl(notchedPetal(27, 14), c.petal, i * 72);
+        for (let i = 0; i < 5; i++) s += petalEl(pointedPetal(19, 4), c.light, i * 72, 'opacity=".6"');
+        s += `<circle r="4.5" fill="${c.core}"/>`;
+        for (let i = 0; i < 8; i++) {
+            const a = i * 45 * Math.PI / 180;
+            s += `<circle cx="${fx(Math.sin(a) * 9)}" cy="${fx(-Math.cos(a) * 9)}" r="1.4" fill="${c.core}"/>`;
+        }
+        return s;
+    }
+
+    function headBud(c, g) {
+        return `<ellipse cy="-9" rx="7.5" ry="12" fill="${c.petal}"/>`
+            + `<path d="M0 -21C-4 -14 -4 -6 0 0C4 -6 4 -14 0 -21Z" fill="${c.light}" opacity=".6"/>`
+            + `<path d="M-9 -3C-9 -12 -3 -8 0 0Z" fill="${g}"/><path d="M9 -3C9 -12 3 -8 0 0Z" fill="${g}"/>`;
+    }
+
+    const HEADS = { lotus: headLotus, rose: headRose, daisy: headDaisy, tulip: headTulip, blossom: headBlossom };
+
+    /* ---------- Cả cây: thân + lá + đầu hoa ---------- */
+    function plantParts(type, pi, fade, H) {
+        const c = {};
+        for (const k in PALETTES[pi]) c[k] = mixHex(PALETTES[pi][k], FIELD.bg, fade);
+        const stemC = mixHex("#4fb592", FIELD.bg, fade);
+        const leafA = mixHex("#46b08a", FIELD.bg, fade);
+        const leafB = mixHex("#79d8b0", FIELD.bg, fade);
+
+        if (type === "grass") {
+            let s = "";
+            const n = 4 + Math.floor(Math.random() * 3);
+            for (let i = 0; i < n; i++) {
+                const x0 = (i - (n - 1) / 2) * 6 + frand(-2, 2);
+                const h = H * frand(0.55, 1);
+                const tip = x0 + frand(-20, 20);
+                s += `<path d="M${fx(x0 - 3.2)} 0Q${fx(x0)} ${fx(-h * .55)} ${fx(tip)} ${fx(-h)}Q${fx(x0 + 2)} ${fx(-h * .5)} ${fx(x0 + 3.2)} 0Z" fill="${i % 2 ? leafA : leafB}"/>`;
+            }
+            return { top: H + 6, body: s };
+        }
+
+        const ex = frand(-10, 10);   // đầu hoa lệch ngang so với gốc
+        const b = frand(-16, 16);    // độ cong của thân
+        const stem = `M0 0C${fx(b)} ${fx(-H * .35)} ${fx(ex - b * .6)} ${fx(-H * .7)} ${fx(ex)} ${fx(-H)}`;
+        const pt = t => [
+            3 * (1 - t) ** 2 * t * b + 3 * (1 - t) * t * t * (ex - b * .6) + t ** 3 * ex,
+            3 * (1 - t) ** 2 * t * (-H * .35) + 3 * (1 - t) * t * t * (-H * .7) + t ** 3 * (-H),
+        ];
+        const leaf = (t, dir, sc) => {
+            const [x, y] = pt(t);
+            return `<g transform="translate(${fx(x)} ${fx(y)}) scale(${fx(dir * sc)} ${fx(sc)}) rotate(-28)">`
+                + `<path d="M0 0C8 -10 24 -11 34 -2C24 7 8 7 0 0Z" fill="${dir > 0 ? leafA : leafB}"/>`
+                + `<path d="M2 -1C12 -4 22 -4 30 -2" fill="none" stroke="${leafB}" stroke-width="1" opacity=".7"/></g>`;
+        };
+        const dir = Math.random() < 0.5 ? 1 : -1;
+        const leaves = leaf(0.28, dir, frand(0.75, 1.2)) + leaf(0.52, -dir, frand(0.7, 1.1));
+
+        const tall = type === "lotus" || type === "tulip";
+        const gy = tall ? -16 : 0;
+        const glow = `<circle cy="${gy}" r="${type === "bud" ? 30 : 52}" fill="url(#fglow${pi})" opacity="${fx(1 - fade)}"/>`;
+        const head = type === "bud" ? headBud(c, leafA) : HEADS[type](c);
+        const rot = tall ? frand(-8, 8) : frand(-18, 18);
+
+        // <g> ngoài đặt vị trí, <g class="head"> trong để CSS làm hiệu ứng nở
+        const body = `<path d="${stem}" fill="none" stroke="${stemC}" stroke-width="3.4" stroke-linecap="round"/>`
+            + leaves
+            + `<g transform="translate(${fx(ex)} ${fx(-H)}) rotate(${fx(rot)})"><g class="head">${glow}${head}</g></g>`;
+        return { top: H + 60, body };
+    }
+
+    // vầng sáng mềm quanh mỗi bông, một gradient cho mỗi bảng màu
+    function fieldDefs() {
+        return `<svg class="field-defs" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>`
+            + PALETTES.map((p, i) =>
+                `<radialGradient id="fglow${i}"><stop offset="0" stop-color="${p.petal}" stop-opacity=".55"/><stop offset="1" stop-color="${p.petal}" stop-opacity="0"/></radialGradient>`).join("")
+            + `</defs></svg>`;
+    }
+
+    /* ---------- Vị trí và độ cao ---------- */
+    function placeX(i, n) {
+        const t = ((i + Math.random()) / n) * 2 - 1;
+        return 0.5 + Math.sign(t) * Math.pow(Math.abs(t), 0.7) * 0.5;   // dồn ra hai mép (số mũ 1 = rải đều)
+    }
+    function heightAt(x, [lo, hi]) {
+        return lo + (hi - lo) * Math.pow(Math.abs(x * 2 - 1), 1.2);     // thấp ở giữa, cao ở mép
+    }
+
+    /* ---------- Ghép vào trang ---------- */
+    function plantHTML(L, it) {
+        const type = fpickWeighted(L.types);
+        const pi = fpick(TYPE_PALETTES[type]);
+        const H = frand(90, 150);
+        const { top, body } = plantParts(type, pi, L.fade, H);
+        const hv = type === "grass" ? it.hv * 0.6 : it.hv;
+        const d = frand(L.t[0], L.t[1]);
+        return `<svg class="plant" viewBox="-62 ${fx(-top)} 124 ${fx(top)}" aria-hidden="true" `
+            + `style="left:${fx(it.x * 100)}%;--hv:${fx(hv)};--ar:${fx(124 / top)};--d:${fx(d)}s;`
+            + `--sw:${fx(frand(1.4, 3.4))}deg;--st:${fx(frand(3.2, 5.8))}s">${body}</svg>`;
+    }
+
+    // Một lớp gồm 2 nhóm: "keep" (còn ở cảnh 3) và "extra" (biến mất ở cảnh 3)
+    function makeLayer(parent, L, items) {
+        items.sort((a, b) => a.hv - b.hv);   // cây cao vẽ sau, nằm trên
+        const keep = items.filter(it => it.keep).map(it => plantHTML(L, it)).join("");
+        const extra = items.filter(it => !it.keep).map(it => plantHTML(L, it)).join("");
+        const layer = document.createElement("div");
+        layer.className = `field-layer layer-${L.name}`;
+        layer.innerHTML = `<div class="fgrp fgrp-keep">${keep}</div><div class="fgrp fgrp-extra">${extra}</div>`;
+        parent.appendChild(layer);
+    }
+
+    let builtW = 0;
+    function buildField() {
+        // giữ lại .field-ground, dựng lại phần còn lại
+        [...field.children].forEach(c => { if (!c.classList.contains("field-ground")) c.remove(); });
+        field.insertAdjacentHTML("afterbegin", fieldDefs());
+        const W = builtW = window.innerWidth;
+
+        // đáy + hai góc dưới: thấp ở giữa, cao dần ra hai mép
+        FIELD.layers.forEach(L => {
+            const n = Math.max(L.min, Math.round(W / L.spacing));
+            const items = [];
+            for (let i = 0; i < n; i++) {
+                const x = placeX(i, n);
+                const hv = heightAt(x, L.hv) * frand(0.6, 1);
+                // cảnh 3 chỉ giữ lại cây thấp
+                items.push({ x, hv, keep: Math.random() < L.keep && hv < L.hv[1] * 0.7 });
+            }
+            makeLayer(field, L, items);
+        });
+
+        // hai góc trên: hoa rủ xuống, dài nhất ở sát góc; cả cụm lật ngược trong CSS (.field-top)
+        const T = FIELD.top;
+        const topBox = document.createElement("div");
+        topBox.className = "field-top";
+        field.appendChild(topBox);
+        const per = Math.max(T.min, Math.round(W / T.spacing));
+        const items = [];
+        for (const side of [0, 1]) {
+            for (let i = 0; i < per; i++) {
+                const u = Math.pow(Math.random(), 1.5) * T.reach;           // khoảng cách tới mép
+                const hv = (T.hv[0] + (T.hv[1] - T.hv[0]) * Math.pow(1 - u / T.reach, 1.2)) * frand(0.6, 1);
+                items.push({ x: side ? 1 - u : u, hv, keep: false });
+            }
+        }
+        makeLayer(topBox, T, items);
+
+        // đom đóm: nửa số con (ff-extra) biến mất ở cảnh 3
+        for (let i = 0; i < FIELD.fireflies; i++) {
+            const el = document.createElement("span");
+            el.className = "firefly" + (i % 2 ? " ff-extra" : "");
+            el.style.cssText = `
+                left: ${frand(3, 97)}%;
+                bottom: ${frand(3, 34)}vh;
+                --dx: ${frand(-70, 70)}px;
+                --dy: ${frand(-90, 40)}px;
+                --t: ${frand(5, 9)}s;
+                --b: ${frand(2, 4)}s;
+                animation-delay: ${-frand(0, 8)}s, ${-frand(0, 4)}s;
+            `;
+            field.appendChild(el);
+        }
+    }
+
+    // Đổi chế độ theo cảnh: "full" | "calm" | "off"
+    window.setFlowerMode = mode => {
+        field.classList.toggle("calm", mode === "calm");
+        field.classList.toggle("off", mode === "off");
+    };
+
+    buildField();
+    setTimeout(() => field.classList.add("bloom"), 250);   // hoa bắt đầu mọc ngay khi vào trang
+
+    // Xoay màn hình / đổi cỡ cửa sổ nhiều: dựng lại cho đủ độ dày theo bề rộng mới
+    let rt = null;
+    window.addEventListener("resize", () => {
+        clearTimeout(rt);
+        rt = setTimeout(() => {
+            if (Math.abs(window.innerWidth - builtW) / builtW > 0.25) buildField();
+        }, 400);
+    });
 })();
