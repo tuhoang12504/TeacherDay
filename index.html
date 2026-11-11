@@ -1,18 +1,24 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Be+Vietnam+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Playfair+Display:wght@600;700&family=Be+Vietnam+Pro:wght@400;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Baloo+2:wght@600;800&family=Dancing+Script:wght@600;700&family=Playfair+Display:wght@600;700&family=Be+Vietnam+Pro:wght@400;600;700&display=swap" rel="stylesheet">
     <title>Chúc mừng ngày nhà giáo Việt Nam</title>
 </head>
 <body>
+    <!-- Cánh đồng hoa nền: dùng chung cho các cảnh (cảnh 1-2 đầy đủ, cảnh 3 thưa, cảnh 4 tắt) -->
+    <div class="flower-field" id="flowerField" aria-hidden="true">
+        <div class="field-ground"></div>
+    </div>
     <div class="scene password-scene active" id="scene1">
         <div class="password-box">
             <div class="lock-icon">🎓</div>
             <h2>Nhập mật khẩu</h2>
-            <p>Đây là một ngày rất đặc biệt</p>
+            <p>Gợi ý: Không có gợi ý đâu</p>
             
             <div class="password-display" id="passwordDisplay"></div>
             
@@ -67,7 +73,7 @@
                         <p class="l-line" style="--n:2">Nhân ngày Nhà giáo Việt Nam 20/11, chúng em xin gửi đến thầy cô lời cảm ơn chân thành nhất.</p>
                         <p class="l-line" style="--n:3">Cảm ơn thầy cô đã kiên nhẫn chỉ cho chúng em từng con chữ, và cả những điều không nằm trong sách vở, cách đứng dậy sau vấp ngã, cách tin vào chính mình.</p>
                         <p class="l-line" style="--n:4">Chúng em chúc thầy cô luôn mạnh khỏe, bình an và thật nhiều niềm vui. Mong những hạt giống thầy cô gieo hôm nay sẽ nở thành những bông hoa thật đẹp.</p>
-                        <p class="l-line l-sign" style="--n:5">Học trò của thầy cô,<br><span>Chi đoàn 8C3</span></p>
+                        <p class="l-line l-sign" style="--n:5">Học trò của thầy cô,<br><span>Chi đội 8C3</span></p>
                     </article>
 
                     <div class="seal" aria-hidden="true"><span>♥</span></div>
@@ -117,6 +123,48 @@
                 <button class="nav-btn nav-prev" id="navPrev" onclick="turnPage(-1)" aria-label="Trang trước">‹</button>
                 <button class="nav-btn nav-next" id="navNext" onclick="turnPage(1)"  aria-label="Trang sau">›</button>
             </div>
+        </div>
+
+        <!-- Trang kết: thuyền giấy cập bến -->
+        <div class="finale" id="finale" aria-hidden="true">
+            <div class="fin-sea-glow"></div>
+            <div class="fin-wave w1"></div>
+
+            <div class="fin-island">
+                <div class="lh-halo"></div>
+                <div class="lh-beam lh-beam-l"></div>
+                <div class="lh-beam lh-beam-r"></div>
+                <div class="lh-rock"></div>
+                <div class="lh-tower"></div>
+                <div class="lh-lamp"></div>
+                <div class="lh-roof"></div>
+                <div class="lh-ring"></div>
+            </div>
+
+            <div class="fin-wave w2"></div>
+
+            <div class="fin-boat" id="finBoat">
+                <div class="fin-boat-bob">
+                    <i class="fb-part fb-hull"></i>
+                    <i class="fb-part fb-sail1"></i>
+                    <i class="fb-part fb-sail2"></i>
+                </div>
+            </div>
+
+            <div class="fin-wave w3"></div>
+
+            <div class="fin-text" id="finText">
+                <p class="fin-line fl1">Kính chúc thầy/cô luôn dồi dào sức khỏe, hạnh phúc</p>
+                <p class="fin-line fl2">và giữ vững ngọn lửa nhiệt huyết</p>
+                <p class="fin-line fl3">để tiếp tục dìu dắt các thế hệ học trò cập bến bờ tri thức.</p>
+                <div class="fin-end">
+                    <p class="fin-sign">Học trò của thầy cô,<br><span>Chi đội 8C3</span></p>
+                </div>
+            </div>
+
+            <button type="button" class="fin-restart" onclick="restartFromBook()">↺ Xem lại từ đầu</button>
+
+            <div class="fin-skip">Chạm để bỏ qua</div>
         </div>
     </div>
     <script src="script.js"></script>
