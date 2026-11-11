@@ -1,6 +1,6 @@
 // 1. CẤU HÌNH
 const CONFIG = {
-    password: '1111',
+    password: '2010',
 
     launchInterval: 800,   // ms giữa các lần bắn
     trailAlpha: 0.15,      // độ đậm lớp phủ đen (càng nhỏ vệt đuôi càng dài)
