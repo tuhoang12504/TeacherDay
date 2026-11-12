@@ -56,9 +56,7 @@ body {
     50% { transform: translateY(-20px); }
 }
 .password-box {
-    background: rgba(20, 22, 70, 0.55);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    background: rgba(20, 22, 70, 0.8);
     border: 1px solid rgba(255, 217, 138, 0.28);
     padding: 28px 22px;
     border-radius: 24px;
@@ -468,12 +466,12 @@ to {
     0% {
         opacity: 0;
         transform: translateY(46px) scale(0.6);
-        filter: blur(10px);
+
     }
 55% {
     opacity: 1;
     transform: translateY(-8px) scale(1.08);
-    filter: blur(0);
+
 }
 75% {
     transform: translateY(2px) scale(0.98);
@@ -481,7 +479,7 @@ to {
 100% {
     opacity: 1;
     transform: translateY(0) scale(1);
-    filter: blur(0);
+
 }
 }
 @keyframes charFloat {
@@ -862,9 +860,9 @@ to {
     animation: letterRise 1.3s cubic-bezier(0.2, 0.9, 0.25, 1.1) both;
 }
 @keyframes letterRise {
-    from { opacity: 0; transform: translateY(140px) scale(0.2) rotate(-6deg); filter: blur(6px); }
+    from { opacity: 0; transform: translateY(140px) scale(0.2) rotate(-6deg); }
     60%  { opacity: 1; }
-    to   { opacity: 1; transform: translateY(0) scale(1) rotate(-0.8deg); filter: blur(0); }
+    to   { opacity: 1; transform: translateY(0) scale(1) rotate(-0.8deg); }
 }
 .letter p { margin: 0 0 0.75em; }
 .l-title {
@@ -1285,12 +1283,12 @@ to {
     0% {
         opacity: 0;
         transform: translateY(var(--emerge)) scale(0.04);
-        filter: blur(4px) brightness(2);
+        filter: brightness(2);
     }
 18% { opacity: 1; }
 60% {
     transform: translateY(calc(var(--emerge) * -0.08)) scale(1.05);
-    filter: blur(0) brightness(1.12);
+    filter: brightness(1.12);
 }
 80% { transform: translateY(3px) scale(0.99); }
 100% {
@@ -1651,8 +1649,6 @@ to {
 .letter { opacity: 1; pointer-events: none; }
 .show-letter .letter { animation: none; pointer-events: auto; }
 .letter {
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
     box-shadow:
     inset 0 0 0 1.5px rgba(255, 255, 255, 0.85),
     inset 0 0 36px rgba(255, 205, 215, 0.3),
@@ -2047,11 +2043,11 @@ to {
 }
 #photoCaption { margin-top: 6px; }
 @keyframes pageRise {
-    from { opacity: 0; transform: translateY(70px) scale(0.96) rotate(-0.8deg); filter: blur(10px); }
+    from { opacity: 0; transform: translateY(70px) scale(0.96) rotate(-0.8deg); }
     to   { opacity: 1; transform: rotate(-0.8deg); filter: none; }
 }
 @keyframes photoRise {
-    from { opacity: 0; transform: translateX(-50%) translateY(70px) scale(0.96); filter: blur(10px); }
+    from { opacity: 0; transform: translateX(-50%) translateY(70px) scale(0.96); }
     to   { opacity: 1; transform: translateX(-50%); filter: none; }
 }
 .rise-in.show-letter .letter-card {
@@ -2076,8 +2072,6 @@ to {
     justify-content: center;
     padding: 20px;
     background: rgba(4, 3, 18, 0.82);
-    -webkit-backdrop-filter: blur(4px);
-    backdrop-filter: blur(4px);
     cursor: zoom-out;
 }
 .photo-zoom-card {
@@ -2127,7 +2121,7 @@ to {
 
 .show-letter .l-line { opacity: 1; animation: none; }   /* dòng không tự mờ hiện nữa, từng chữ sẽ hiện */
 .l-char { opacity: 0; }
-.show-letter .l-char {
+.show-letter .letter-card.landed .l-char {
     animation: charIn 0.55s ease both;
     animation-delay: var(--d, 0s);
 }
@@ -2154,12 +2148,12 @@ to {
 @keyframes letterSink {
     0%   { opacity: 1; transform: translateY(0) scale(1) rotate(-0.8deg); filter: none; }
     100% { opacity: 0; transform: translateY(var(--emerge, 120px)) scale(0.06) rotate(-0.8deg);
-           filter: blur(4px) brightness(2); }
+           filter: brightness(2); }
 }
 @keyframes photoSink {
     0%   { opacity: 1; transform: translateX(-50%); filter: none; }
     100% { opacity: 0; transform: translateX(-50%) translateY(var(--emerge, 120px)) scale(0.06);
-           filter: blur(4px) brightness(2); }
+           filter: brightness(2); }
 }
 
 /* Tắt kiểu quét ngang cũ khi LẬT TRANG (đóng sách vẫn giữ nguyên vì lúc đó không còn class "open") */
@@ -2177,10 +2171,10 @@ to {
 /* --- 2. Nội dung mới: trồi lên từ sách (giống lúc thư xuất hiện lần đầu) --- */
 @keyframes photoEmerge {
     0%   { opacity: 0; transform: translateX(-50%) translateY(var(--emerge, 120px)) scale(0.06);
-           filter: blur(4px) brightness(2); }
+           filter: brightness(2); }
     18%  { opacity: 1; }
     60%  { transform: translateX(-50%) translateY(calc(var(--emerge, 120px) * -0.08)) scale(1.05);
-           filter: blur(0) brightness(1.12); }
+           filter: brightness(1.12); }
     80%  { transform: translateX(-50%) translateY(3px) scale(0.99); }
     100% { opacity: 1; transform: translateX(-50%); filter: none; }
 }
@@ -2209,8 +2203,6 @@ to {
     justify-content: center;
     padding: 20px;
     background: rgba(6, 8, 30, 0.88);
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.35s ease, visibility 0s linear 0.35s;
@@ -2297,12 +2289,12 @@ to {
 @keyframes letterSink {
     0%   { opacity: 1; transform: translateY(0) scale(1) rotate(-0.8deg); filter: none; }
     100% { opacity: 0; transform: translateY(var(--emerge, 120px)) scale(0.06) rotate(-0.8deg);
-           filter: blur(4px) brightness(2); }
+           filter: brightness(2); }
 }
 @keyframes photoSink {
     0%   { opacity: 1; transform: translateX(-50%); filter: none; }
     100% { opacity: 0; transform: translateX(-50%) translateY(var(--emerge, 120px)) scale(0.06);
-           filter: blur(4px) brightness(2); }
+           filter: brightness(2); }
 }
 
 /* Tắt hẳn kiểu quét ngang cũ: áp dụng cho cả lật trang lẫn đóng sách (trang đầu / trang cuối) */
@@ -2320,10 +2312,10 @@ to {
 /* --- 2. Nội dung mới: trồi lên từ sách (giống lúc thư xuất hiện lần đầu) --- */
 @keyframes photoEmerge {
     0%   { opacity: 0; transform: translateX(-50%) translateY(var(--emerge, 120px)) scale(0.06);
-           filter: blur(4px) brightness(2); }
+           filter: brightness(2); }
     18%  { opacity: 1; }
     60%  { transform: translateX(-50%) translateY(calc(var(--emerge, 120px) * -0.08)) scale(1.05);
-           filter: blur(0) brightness(1.12); }
+           filter: brightness(1.12); }
     80%  { transform: translateX(-50%) translateY(3px) scale(0.99); }
     100% { opacity: 1; transform: translateX(-50%); filter: none; }
 }
@@ -2365,9 +2357,7 @@ to {
     line-height: 1;
     color: #ffd98a;
     cursor: pointer;
-    background: rgba(20, 22, 70, 0.55);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    background: rgba(20, 22, 70, 0.8);
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.12);
     transition: transform 0.2s ease, background 0.2s ease;
     -webkit-tap-highlight-color: transparent;
@@ -2652,7 +2642,7 @@ to {
 .fl3 { --step: 0.04s; }
 .is-final .f-char { opacity: 1; animation: none; }
 @keyframes finCharIn {
-    from { opacity: 0; transform: translateY(0.3em); filter: blur(3px); }
+    from { opacity: 0; transform: translateY(0.3em); }
     to   { opacity: 1; transform: none; filter: none; }
 }
 
@@ -2702,9 +2692,7 @@ to {
     letter-spacing: 0.02em;
     color: #ffd98a;
     cursor: pointer;
-    background: rgba(20, 22, 70, 0.55);
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
+    background: rgba(20, 22, 70, 0.8);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
     opacity: 0;
     pointer-events: none;
