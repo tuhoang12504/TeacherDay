@@ -568,6 +568,7 @@ function launchRocket() {
     const color = randomHue();
 
     rockets.push(new Rocket(x, color, type));
+    ensureLoop();
 }
 
 // 8. VÒNG LẶP CHÍNH
@@ -577,6 +578,12 @@ function updateAndDraw(list) {
         else list[i].draw();
     }
 }
+
+// Vòng lặp vẽ chỉ chạy khi còn pháo / hạt; hết thì tự dừng để không tốn máy ở cảnh 1, 2 và 4.
+// Mỗi lần bắn pháo sẽ gọi ensureLoop() để chạy lại.
+const TRAIL_CLEAR_FRAMES = 90;   // sau khi hết hạt, chạy thêm chừng này khung để vệt đuôi mờ hẳn rồi dừng
+let loopId = 0;
+let idleFrames = 0;
 
 function loop() {
     // Làm mờ nét cũ thay vì phủ đen => canvas trong suốt, thấy được nền CSS
@@ -588,7 +595,20 @@ function loop() {
     updateAndDraw(rockets);
     updateAndDraw(particles);
 
-    requestAnimationFrame(loop);
+    if (rockets.length || particles.length) {
+        idleFrames = 0;
+    } else if (++idleFrames > TRAIL_CLEAR_FRAMES) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        loopId = 0;
+        return;
+    }
+    loopId = requestAnimationFrame(loop);
+}
+
+function ensureLoop() {
+    if (loopId) return;
+    idleFrames = 0;
+    loopId = requestAnimationFrame(loop);
 }
 
 let launchTimer = null;
@@ -662,7 +682,37 @@ const PHOTOS = [
     { src: "images/anh5.jpg", caption: "Kỷ niệm 5" },
     { src: "images/anh6.jpg", caption: "Kỷ niệm 6" },
 ];
-PHOTOS.forEach(p => { if (p.src) new Image().src = p.src; });
+// Tải trước tất cả ảnh và nhớ tỉ lệ của từng ảnh, để lật tới ảnh nào khung cũng đúng kích thước ngay từ đầu
+// (trước đây khung chỉ đổi kích thước khi thẻ <img> tải xong, đúng lúc thẻ đang bay lên nên thấy bị giật)
+const PHOTO_IMGS = [];
+const PHOTO_META = [];
+PHOTOS.forEach((p, i) => {
+    if (!p.src) return;
+    const im = new Image();
+    im.onload = () => { PHOTO_META[i] = { ar: im.naturalWidth / im.naturalHeight }; };
+    im.src = p.src;
+    PHOTO_IMGS[i] = im;
+});
+
+// Đặt khung đúng tỉ lệ ảnh ngay lập tức (không chờ thẻ <img> tải xong)
+function applyPhotoMeta(pg) {
+    const meta = PHOTO_META[pg - 1];
+    if (!meta) return;
+    const frame = document.getElementById("photoFrame");
+    frame.style.setProperty("--ar", meta.ar);
+    frame.classList.add("has-img");
+}
+
+// Chờ ảnh của trang pg tải xong (tối đa maxWait ms) rồi mới cho thẻ ảnh bay lên
+function photoReady(pg, maxWait = 1000) {
+    const im = PHOTO_IMGS[pg - 1];
+    if (pg === 0 || !im || PHOTO_META[pg - 1] || im.complete) return Promise.resolve();
+    return new Promise(resolve => {
+        im.addEventListener("load", resolve, { once: true });
+        im.addEventListener("error", resolve, { once: true });
+        setTimeout(resolve, maxWait);
+    });
+}
 
 const FLIP = {
     dur: 1.1,     // trang giấy lật (nội dung bị quét mất trong cùng khoảng này)
@@ -693,6 +743,7 @@ function renderPage() {
     document.getElementById("photoCaption").textContent = p.caption || "";
 
     frame.classList.remove("has-img");
+    applyPhotoMeta(page);
     if (p.src) {
     img.onload = () => {
         frame.style.setProperty("--ar", img.naturalWidth / img.naturalHeight);   // khung theo tỉ lệ ảnh
@@ -735,7 +786,11 @@ function turnPage(dir) {                            // dir: 1 = tới, -1 = lui
         leaf.className = "pages pages-r pages-f";
         page = next;
         renderPage();
-        playIntro();
+        photoReady(next).then(() => {          // đợi ảnh sẵn sàng rồi mới bay lên, khung không đổi cỡ giữa chừng
+            if (page !== next) return;
+            applyPhotoMeta(next);
+            playIntro();
+        });
     }, FLIP.dur * 1000);
 
     setTimeout(() => {
@@ -807,7 +862,6 @@ function spawnMotes(count = 18) {
         area.appendChild(m);
     }
 }
-loop();
 
 // ===== Trang giấy cong =====
 const PAGE = {
@@ -1018,7 +1072,8 @@ window.addEventListener("resize", () => closePhotoZoom(true));
 
 // ===== Thư: chữ hiện dần từng ký tự =====
 const LETTER_TYPE = {
-    start: 1.3,       // giây, tính từ lúc thư bắt đầu hiện
+    rise: 1.5,        // giây: thư nổi lên mất bao lâu (khớp letterRise 1.5s trong CSS)
+    start: 0.35,      // nghỉ bao lâu sau khi thư nổi lên xong thì bắt đầu viết chữ
     step: 0.026,      // giây giữa hai ký tự (tăng lên thì chữ hiện chậm hơn)
     linePause: 0.3,   // nghỉ thêm sau mỗi đoạn
 };
@@ -1056,15 +1111,42 @@ function prepareLetter() {
         line.dataset.typed = "1";
         splitLetterNode(line, state);
         if (line.classList.contains("l-title")) {
-            line.style.setProperty("--orn-at", `${(LETTER_TYPE.start + state.t).toFixed(2)}s`);
+            line.style.setProperty("--orn-at", `${(LETTER_TYPE.rise + LETTER_TYPE.start + state.t).toFixed(2)}s`);
         }
         state.t += LETTER_TYPE.linePause;
     });
     // dấu ♥ đóng triện hiện sau khi chữ cuối đã hiện xong
     const card = document.querySelector(".letter-card");
-    if (card) card.style.setProperty("--seal-at", `${(LETTER_TYPE.start + state.t + 0.2).toFixed(2)}s`);
+    if (card) card.style.setProperty("--seal-at", `${(LETTER_TYPE.rise + LETTER_TYPE.start + state.t + 0.2).toFixed(2)}s`);
 }
 prepareLetter();
+
+// Chữ chỉ bắt đầu hiện sau khi thư đã nổi lên xong (class "landed"), để lúc thư đang bay không phải
+// xử lý cả trăm hiệu ứng chữ cùng lúc. Class tự gỡ khi thư biến mất.
+(function () {
+    const stage = document.getElementById("bookStage");
+    const card = document.querySelector(".letter-card");
+    let fallback = null;
+
+    const land = () => {
+        clearTimeout(fallback);
+        if (stage.classList.contains("show-letter") && !stage.classList.contains("rise-in")) {
+            card.classList.add("landed");
+        }
+    };
+    card.addEventListener("animationend", e => {
+        if (e.target === card && e.animationName === "letterRise") land();
+    });
+    new MutationObserver(() => {
+        if (!stage.classList.contains("show-letter")) {
+            clearTimeout(fallback);
+            card.classList.remove("landed");
+        } else if (!card.classList.contains("landed")) {
+            clearTimeout(fallback);                                    // phòng khi animationend không chạy
+            fallback = setTimeout(land, (LETTER_TYPE.rise + 0.4) * 1000);
+        }
+    }).observe(stage, { attributes: true, attributeFilter: ["class"] });
+})();
 // ===== Nhắc xoay ngang màn hình =====
 // Chỉ hiện ở màn hình mật khẩu (cảnh 1), trên thiết bị cảm ứng đang ở chế độ dọc.
 // Xoay ngang thì modal tự tắt; xoay lại dọc khi vẫn ở cảnh 1 thì modal hiện lại.
@@ -1337,6 +1419,7 @@ class TextRocket extends Rocket {
 }
 function launchTextRocket(text, xFrac, hue, apexFrac = 0.24) {
     rockets.push(new TextRocket(canvas.width * xFrac, hue, text, apexFrac));
+    ensureLoop();
 }
 
 // --- Các tờ giấy bay ra khỏi sách rồi tụ về chỗ chiếc thuyền ---
@@ -1803,8 +1886,14 @@ window.restartFromBook = restartFromBook;
 
     // Đổi chế độ theo cảnh: "full" | "calm" | "off"
     window.setFlowerMode = mode => {
+        if (mode === "off") {
+            // chỉ mờ cả cánh đồng đi, giữ nguyên "calm" đang có. Nếu gỡ calm cùng lúc thì các nhóm hoa
+            // đang ẩn sẽ hiện lại trong lúc cánh đồng mờ dần, nhìn như hoa nhiều lên rồi mới biến mất
+            field.classList.add("off");
+            return;
+        }
+        field.classList.remove("off");
         field.classList.toggle("calm", mode === "calm");
-        field.classList.toggle("off", mode === "off");
     };
 
     buildField();
