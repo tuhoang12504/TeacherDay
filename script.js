@@ -675,12 +675,13 @@ function openBook() {
 window.openBook = openBook;
 // ===== Các trang: trang 0 là bức thư, các trang sau là khung ảnh =====
 const PHOTOS = [
-    { src: "images/anh1.jpg", caption: "Kỷ niệm 1" },
-    { src: "images/anh2.jpg", caption: "Kỷ niệm 2" },
-    { src: "images/anh3.jpg", caption: "Kỷ niệm 3" },
-    { src: "images/anh4.jpg", caption: "Kỷ niệm 4" },
-    { src: "images/anh5.jpg", caption: "Kỷ niệm 5" },
-    { src: "images/anh6.jpg", caption: "Kỷ niệm 6" },
+    { src: "images/anh7.jpg", caption: "Kỷ niệm 1" },
+    { src: "images/anh1.jpg", caption: "Kỷ niệm 2" },
+    { src: "images/anh2.jpg", caption: "Kỷ niệm 3" },
+    { src: "images/anh3.jpg", caption: "Kỷ niệm 4" },
+    { src: "images/anh4.jpg", caption: "Kỷ niệm 5" },
+    { src: "images/anh5.jpg", caption: "Kỷ niệm 6" },
+    { src: "images/anh6.jpg", caption: "Kỷ niệm 7" },
 ];
 // Tải trước tất cả ảnh và nhớ tỉ lệ của từng ảnh, để lật tới ảnh nào khung cũng đúng kích thước ngay từ đầu
 // (trước đây khung chỉ đổi kích thước khi thẻ <img> tải xong, đúng lúc thẻ đang bay lên nên thấy bị giật)
