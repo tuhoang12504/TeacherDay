@@ -1,7 +1,5 @@
 // 1. CẤU HÌNH
 const CONFIG = {
-    password: '2011',
-
     launchInterval: 800,   // ms giữa các lần bắn
     trailAlpha: 0.15,      // độ đậm lớp phủ đen (càng nhỏ vệt đuôi càng dài)
     numberStars: 150,      // số lượng sao ở nền
@@ -85,52 +83,16 @@ function splitText(el) {
     el.dataset.count = i;
 }
 
-let isTransitioning = false;
-
 function nextScene() {
-    if (isTransitioning) return; // chặn bấm ✓ hai lần liên tiếp
-
     const scenes = document.querySelectorAll(".scene");
     const current = document.querySelector(".scene.active");
     const nextIndex = Array.from(scenes).indexOf(current) + 1;
     if (!current || nextIndex >= scenes.length) return;
 
     const next = scenes[nextIndex];
-
-    // Cảnh 1 -> 2: cái cũ trôi lên, cái mới nổi lên
-    if (next.id === "scene2") {
-        riseTransition(current, next);
-        return;
-    }
-
-    // Các cảnh khác: đổi ngay, cảnh mới mờ hiện (như cũ)
     current.classList.remove("active");
     next.classList.add("active");
     if (next.id === "scene3") startBookScene();
-}
-
-function riseTransition(current, next) {
-    isTransitioning = true;
-
-    current.classList.add("leaving");
-    next.classList.add("active", "entering");
-
-    // Chữ bắt đầu sau khi thiệp nổi lên xong, cộng thêm một nhịp nghỉ
-    const textStart = TRANSITION.enterDelay + TRANSITION.enter + TRANSITION.textGap;
-    playGreeting(textStart);
-
-    // Khi cảnh cũ trôi xong thì mới ẩn hẳn
-    let done = false;
-    const finish = () => {
-        if (done) return;
-        done = true;
-        current.classList.remove("active", "leaving");
-        isTransitioning = false;
-    };
-    current.addEventListener("animationend", e => {
-        if (e.target === current && e.animationName === "sceneLeave") finish();
-    });
-    setTimeout(finish, (TRANSITION.leave + 0.3) * 1000); // phòng khi animationend không chạy
 }
 
 // Tách chữ một lần ngay khi tải trang, để chữ ẩn sẵn trong lúc thiệp nổi lên
@@ -160,69 +122,12 @@ function playGreeting(startAt = 0.5) {
 }
 
 prepareGreeting();
+// Thiệp chúc mừng là cảnh đầu tiên: nổi lên khi vào trang (class "entering" trong HTML), rồi chữ hiện dần
+playGreeting(TRANSITION.enterDelay + TRANSITION.enter + TRANSITION.textGap);
 
 window.nextScene = nextScene;
 
-let enteredPassword = '';
-
-function pressKey(num) {
-    if (enteredPassword.length < 4) {
-        enteredPassword += num;
-        updateDisplay();
-        createBalloon(num);
-    }
-}
-window.pressKey = pressKey;
-function deleteKey() {
-    enteredPassword = enteredPassword.slice(0, -1);
-    updateDisplay();
-}
-window.deleteKey = deleteKey;
-function updateDisplay() {
-    const display = document.getElementById('passwordDisplay');
-    display.innerHTML = '';
-    for (let i = 0; i < 4; i++) {
-        if (i < enteredPassword.length) {
-            display.innerHTML += '<span></span>';
-        } else {
-            display.innerHTML += '<span style="background: transparent; border: 2px solid #ffb3d9;"></span>';
-        }
-    }
-}
-
-function createBalloon(num) {
-    const balloon = document.createElement('div');
-    balloon.className = 'floating-balloon';
-    balloon.textContent = ['🎈', '🎉', '💕', '✨', '🎊'][Math.floor(Math.random() * 5)];
-    
-    const rect = document.querySelector(`.keypad .key${num}`).getBoundingClientRect();
-    balloon.style.left = (rect.left + rect.width / 2 - 20) + 'px';
-    balloon.style.top = (rect.top + rect.height / 2 - 20) + 'px';
-    
-    document.body.appendChild(balloon);
-    setTimeout(() => balloon.remove(), 4000);
-}
-
-function checkPassword() {
-    const errorMsg = document.getElementById('errorMsg');
-    
-    if (enteredPassword === CONFIG.password) {
-        errorMsg.style.display = 'none';
-        nextScene();
-    } else {
-        errorMsg.style.display = 'block';
-        enteredPassword = '';
-        const box = document.querySelector(".password-box");
-        box.classList.remove("shake");
-        void box.offsetWidth;          // reset animation
-        box.classList.add("shake");
-        updateDisplay();
-    }
-}
-updateDisplay();
-window.checkPassword = checkPassword;
-
-// Scene 2------------------------------------------------------------------------------------------------------------
+// Thiệp chúc mừng------------------------------------------------------------------------------------------------------
 let loveSent = false;
 
 function receiveLove() {
@@ -675,13 +580,12 @@ function openBook() {
 window.openBook = openBook;
 // ===== Các trang: trang 0 là bức thư, các trang sau là khung ảnh =====
 const PHOTOS = [
-    { src: "images/anh7.jpg", caption: "Kỷ niệm 1" },
-    { src: "images/anh1.jpg", caption: "Kỷ niệm 2" },
-    { src: "images/anh2.jpg", caption: "Kỷ niệm 3" },
-    { src: "images/anh3.jpg", caption: "Kỷ niệm 4" },
-    { src: "images/anh4.jpg", caption: "Kỷ niệm 5" },
-    { src: "images/anh5.jpg", caption: "Kỷ niệm 6" },
-    { src: "images/anh6.jpg", caption: "Kỷ niệm 7" },
+    { src: "images/anh1.jpg", caption: "Kỷ niệm 1" },
+    { src: "images/anh2.jpg", caption: "Kỷ niệm 2" },
+    { src: "images/anh3.jpg", caption: "Kỷ niệm 3" },
+    { src: "images/anh4.jpg", caption: "Kỷ niệm 4" },
+    { src: "images/anh5.jpg", caption: "Kỷ niệm 5" },
+    { src: "images/anh6.jpg", caption: "Kỷ niệm 6" },
 ];
 // Tải trước tất cả ảnh và nhớ tỉ lệ của từng ảnh, để lật tới ảnh nào khung cũng đúng kích thước ngay từ đầu
 // (trước đây khung chỉ đổi kích thước khi thẻ <img> tải xong, đúng lúc thẻ đang bay lên nên thấy bị giật)
@@ -1149,16 +1053,16 @@ prepareLetter();
     }).observe(stage, { attributes: true, attributeFilter: ["class"] });
 })();
 // ===== Nhắc xoay ngang màn hình =====
-// Chỉ hiện ở màn hình mật khẩu (cảnh 1), trên thiết bị cảm ứng đang ở chế độ dọc.
+// Chỉ hiện ở cảnh đầu tiên (thiệp chúc mừng), trên thiết bị cảm ứng đang ở chế độ dọc.
 // Xoay ngang thì modal tự tắt; xoay lại dọc khi vẫn ở cảnh 1 thì modal hiện lại.
 (function () {
     const ROTATE = {
-        onlyFirstScene: true,   // true: chỉ nhắc ở cảnh mật khẩu; false: nhắc ở mọi cảnh
+        onlyFirstScene: true,   // true: chỉ nhắc ở cảnh đầu (thiệp chúc mừng); false: nhắc ở mọi cảnh
         allowSkip: true,        // true: có nút "Vẫn xem ở chế độ dọc" (phòng khi máy đang khóa xoay)
     };
 
     const portraitQuery = window.matchMedia("(orientation: portrait) and (pointer: coarse)");
-    const scene1 = document.getElementById("scene1");
+    const firstScene = document.getElementById("scene2");   // cảnh đầu tiên (thiệp chúc mừng)
     let dismissed = false;
 
     const modal = document.createElement("div");
@@ -1180,20 +1084,20 @@ prepareLetter();
     if (skip) skip.addEventListener("click", () => { dismissed = true; update(); });
 
     function inScope() {
-        return !ROTATE.onlyFirstScene || scene1.classList.contains("active");
+        return !ROTATE.onlyFirstScene || firstScene.classList.contains("active");
     }
 
     function update() {
         const open = !dismissed && inScope() && portraitQuery.matches;
         modal.classList.toggle("is-open", open);
         modal.setAttribute("aria-hidden", open ? "false" : "true");
-        scene1.inert = open;   // chặn bấm bàn phím / Tab vào phía sau modal
+        firstScene.inert = open;   // chặn bấm bàn phím / Tab vào phía sau modal
     }
 
     if (portraitQuery.addEventListener) portraitQuery.addEventListener("change", update);
     else portraitQuery.addListener(update);                // Safari cũ
     window.addEventListener("orientationchange", update);
-    new MutationObserver(update).observe(scene1, { attributes: true, attributeFilter: ["class"] });
+    new MutationObserver(update).observe(firstScene, { attributes: true, attributeFilter: ["class"] });
 
     update();
 })();
@@ -1207,7 +1111,7 @@ document.querySelector(".cover-front").addEventListener("click", e => {
 // ===== Nhạc nền =====
 // Trình duyệt chặn tự phát nhạc khi người dùng chưa chạm vào trang, nên:
 //  1. Thử phát ngay khi tải trang (có thể được nếu trình duyệt cho phép).
-//  2. Nếu bị chặn, nhạc sẽ tự phát ở lần chạm / bấm đầu tiên (thường là lúc bấm phím nhập mật khẩu).
+//  2. Nếu bị chặn, nhạc sẽ tự phát ở lần chạm / bấm đầu tiên (thường là lúc bấm nút "Đón nhận yêu thương").
 (function () {
     const MUSIC = {
         src: "music.m4a",   // đường dẫn file nhạc (đặt file vào thư mục music/)
@@ -1604,9 +1508,9 @@ window.restartFromBook = restartFromBook;
 
 // ===== Cánh đồng hoa =====
 // Nền chung nằm dưới các cảnh (CSS ở cuối style.css). Đổi chế độ theo cảnh bằng setFlowerMode():
-//   "full": cảnh 1 và 2 - hoa ở đáy, hai góc dưới và hai góc trên (rủ xuống)
-//   "calm": cảnh 3      - chỉ còn vài hàng hoa thấp ở đáy, nhường điểm nhấn cho pháo hoa
-//   "off" : cảnh 4      - không có hoa
+//   "full": cảnh thiệp chúc mừng - hoa ở đáy, hai góc dưới và hai góc trên (rủ xuống)
+//   "calm": cảnh cuốn sách  - chỉ còn vài hàng hoa thấp ở đáy, nhường điểm nhấn cho pháo hoa
+//   "off" : trang kết       - không có hoa
 (function () {
     const field = document.getElementById("flowerField");
     if (!field) return;
